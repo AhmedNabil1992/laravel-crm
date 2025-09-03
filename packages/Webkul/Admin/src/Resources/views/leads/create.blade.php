@@ -56,6 +56,14 @@
                 />
             @endif
 
+            <!-- Set current user as default sales owner -->
+            <input
+                type="hidden"
+                id="user_id"
+                name="user_id"
+                value="{{ auth()->id() }}"
+            />
+
             <!-- Lead Create Component -->
             <v-lead-create>
                 <x-admin::shimmer.leads.datagrid />
@@ -155,7 +163,7 @@
                                 <div class="w-full">
                                     <x-admin::attributes
                                         :custom-attributes="app('Webkul\Attribute\Repositories\AttributeRepository')->findWhere([
-                                            ['code', 'IN', ['expected_close_date', 'user_id']],
+                                            ['code', 'IN', ['expected_close_date']],
                                             'entity_type' => 'leads',
                                             'quick_add'   => 1
                                         ])"

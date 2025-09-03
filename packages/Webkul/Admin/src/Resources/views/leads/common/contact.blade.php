@@ -47,7 +47,7 @@
 
             <v-email-component
                 :attribute="{'id': person?.id, 'code': 'person[emails]', 'name': 'Email'}"
-                validations="required"
+                {{-- validations="required" --}}
                 :value="person.emails"
                 :is-disabled="person?.id ? true : false"
             ></v-email-component>

@@ -7,15 +7,15 @@
     {!! view_render_event('admin.leads.edit.form_controls.before', ['lead' => $lead]) !!}
 
     <!-- Edit Lead Form -->
-    <x-admin::form         
+    <x-admin::form
         :action="route('admin.leads.update', $lead->id)"
         method="PUT"
     >
         <div class="flex flex-col gap-4">
             <div class="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
                 <div class="flex flex-col gap-2">
-                    <x-admin::breadcrumbs 
-                        name="leads.edit" 
+                    <x-admin::breadcrumbs
+                        name="leads.edit"
                         :entity="$lead"
                     />
 
@@ -47,6 +47,9 @@
 
             <input type="hidden" id="lead_pipeline_stage_id" name="lead_pipeline_stage_id" value="{{ $lead->lead_pipeline_stage_id }}" />
 
+            <!-- Keep current sales owner as default -->
+            <input type="hidden" id="user_id" name="user_id" value="{{ $lead->user_id ?? auth()->id() }}" />
+
             <!-- Lead Edit Component -->
             <v-lead-edit :lead="{{ json_encode($lead) }}">
                 <x-admin::shimmer.leads.datagrid />
@@ -57,7 +60,7 @@
     {!! view_render_event('admin.leads.edit.form_controls.after', ['lead' => $lead]) !!}
 
     @pushOnce('scripts')
-        <script 
+        <script
             type="text/x-template"
             id="v-lead-edit-template"
         >
@@ -87,8 +90,8 @@
                     {!! view_render_event('admin.leads.edit.lead_details.before', ['lead' => $lead]) !!}
 
                     <!-- Details section -->
-                    <div 
-                        class="flex flex-col gap-4" 
+                    <div
+                        class="flex flex-col gap-4"
                         id="lead-details"
                     >
                         <div class="flex flex-col gap-1">
@@ -138,11 +141,11 @@
                                         :entity="$lead"
                                     />
                                 </div>
-                                    
+
                                 <div class="w-full">
                                     <x-admin::attributes
                                         :custom-attributes="app('Webkul\Attribute\Repositories\AttributeRepository')->findWhere([
-                                            ['code', 'IN', ['expected_close_date', 'user_id']],
+                                            ['code', 'IN', ['expected_close_date']],
                                             'entity_type' => 'leads',
                                             'quick_add'   => 1
                                         ])"
@@ -166,8 +169,8 @@
                     {!! view_render_event('admin.leads.edit.contact_person.before', ['lead' => $lead]) !!}
 
                     <!-- Contact Person -->
-                    <div 
-                        class="flex flex-col gap-4" 
+                    <div
+                        class="flex flex-col gap-4"
                         id="contact-person"
                     >
                         <div class="flex flex-col gap-1">
@@ -191,8 +194,8 @@
                     {!! view_render_event('admin.leads.edit.contact_person.products.before', ['lead' => $lead]) !!}
 
                     <!-- Product Section -->
-                    <div 
-                        class="flex flex-col gap-4" 
+                    <div
+                        class="flex flex-col gap-4"
                         id="products"
                     >
                         <div class="flex flex-col gap-1">
@@ -213,7 +216,7 @@
 
                     {!! view_render_event('admin.leads.edit.contact_person.products.after', ['lead' => $lead]) !!}
                 </div>
-                
+
                 {!! view_render_event('admin.leads.form_controls.after') !!}
             </div>
         </script>
@@ -225,10 +228,10 @@
                 data() {
                     return {
                         activeTab: 'lead-details',
-                        
-                        lead:  @json($lead),  
 
-                        person:  @json($lead->person),  
+                        lead:  @json($lead),
+
+                        person:  @json($lead->person),
 
                         products: @json($lead->products),
 
@@ -243,9 +246,9 @@
                 methods: {
                     /**
                      * Scroll to the section.
-                     * 
+                     *
                      * @param {String} tabId
-                     * 
+                     *
                      * @returns {void}
                      */
                     scrollToSection(tabId) {
@@ -266,5 +269,5 @@
                 scroll-behavior: smooth;
             }
         </style>
-    @endPushOnce    
+    @endPushOnce
 </x-admin::layouts>

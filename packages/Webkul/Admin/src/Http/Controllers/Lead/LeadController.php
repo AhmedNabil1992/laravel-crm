@@ -6,7 +6,9 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use Prettus\Repository\Criteria\RequestCriteria;
@@ -453,6 +455,9 @@ class LeadController extends Controller
             )
         );
 
+        // Manually recalculate lead value after product update
+        $this->recalculateLeadValue($leadId);
+
         return response()->json([
             'data' => $product,
             'message' => trans('admin::app.leads.update-success'),
@@ -474,6 +479,9 @@ class LeadController extends Controller
 
             Event::dispatch('lead.product.delete.after', $id);
 
+            // Manually recalculate lead value after product removal
+            $this->recalculateLeadValue($id);
+
             return response()->json([
                 'message' => trans('admin::app.leads.destroy-success'),
             ]);
@@ -481,6 +489,34 @@ class LeadController extends Controller
             return response()->json([
                 'message' => trans('admin::app.leads.destroy-failed'),
             ]);
+        }
+    }
+
+    /**
+     * Recalculate lead value based on products total
+     */
+    protected function recalculateLeadValue($leadId)
+    {
+        // Use direct database query for most accurate sum
+        $totalLeadValue = DB::table('lead_products')
+            ->where('lead_id', $leadId)
+            ->sum('amount');
+
+        // Update lead_value in leads table
+        DB::table('leads')
+            ->where('id', $leadId)
+            ->update(['lead_value' => $totalLeadValue, 'updated_at' => now()]);
+
+        // Update attribute value
+        try {
+            app('Webkul\Attribute\Repositories\AttributeValueRepository')->save([
+                'entity_id' => $leadId,
+                'entity_type' => 'leads',
+                'lead_value' => $totalLeadValue,
+            ]);
+        } catch (\Exception $e) {
+            // Log error but don't break the flow
+            Log::warning('Failed to update lead_value attribute: ' . $e->getMessage());
         }
     }
 

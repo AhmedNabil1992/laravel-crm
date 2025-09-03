@@ -60,7 +60,7 @@
                     {!! view_render_event('admin.leads.view.products.table.table_body.after', ['lead' => $lead]) !!}
                 </x-admin::table>
             </div>
-            
+
             {!! view_render_event('admin.leads.view.products.table.after', ['lead' => $lead]) !!}
 
             {!! view_render_event('admin.leads.view.products.table.add_more.before', ['lead' => $lead]) !!}
@@ -69,7 +69,7 @@
             <div>
                 <button
                     type="button"
-                    class="flex max-w-max items-center gap-2 text-brandColor"
+                    class="flex items-center gap-2 max-w-max text-brandColor"
                     @click="addProduct"
                 >
                     <i class="icon-add text-md !text-brandColor"></i>
@@ -112,7 +112,7 @@
         type="text/x-template"
         id="v-product-item-template"
     >
-        <x-admin::table.tbody.tr class="border-b border-gray-200 align-top dark:border-gray-800">
+        <x-admin::table.tbody.tr class="align-top border-b border-gray-200 dark:border-gray-800">
             <!-- Product Name -->
             <x-admin::table.td class="!px-4">
                 <v-form v-slot="{ errors }" @keydown.enter.prevent>
@@ -153,8 +153,7 @@
                             rules="required|decimal:4"
                             :label="trans('admin::app.leads.view.products.quantity')"
                             :placeholder="trans('admin::app.leads.view.products.quantity')"
-                            @on-change="(event) => product.quantity = event.value"
-                            ::url="url(product)"
+                            @on-change="(event) => { product.quantity = event.value; updateAmount(); }"
                             ::params="{product_id: product.product_id}"
                             position="left"
                             ::errors="errors"
@@ -174,8 +173,7 @@
                             rules="required|decimal:4"
                             :label="trans('admin::app.leads.view.products.price')"
                             :placeholder="trans('admin::app.leads.view.products.price')"
-                            @on-change="(event) => product.price = event.value"
-                            ::url="url(product)"
+                            @on-change="(event) => { product.price = event.value; updateAmount(); }"
                             ::params="{product_id: product.product_id}"
                             position="left"
                             ::value-label="$admin.formatPrice(product.price)"
@@ -192,14 +190,13 @@
                         <x-admin::form.control-group.control
                             type="inline"
                             ::name="'amount'"
-                            ::value="product.price * product.quantity"
+                            ::value="computedAmount"
                             rules="required|decimal:4"
                             :label="trans('admin::app.leads.view.products.total')"
                             :placeholder="trans('admin::app.leads.view.products.total')"
                             :allowEdit="false"
-                            ::url="url(product)"
                             position="left"
-                            ::value-label="$admin.formatPrice(product.price * product.quantity)"
+                            ::value-label="$admin.formatPrice(computedAmount)"
                             ::errors="errors"
                         />
                     </x-admin::form.control-group>
@@ -213,12 +210,12 @@
                         <div class="flex items-center justify-center gap-4">
                             <i
                                 @click="attachProduct(product)"
-                                class="icon-enter cursor-pointer text-2xl text-black"
+                                class="text-2xl text-black cursor-pointer icon-enter"
                             ></i>
 
                             <i
                                 @click="removeProduct"
-                                class="icon-cross-large cursor-pointer text-2xl text-black"
+                                class="text-2xl text-black cursor-pointer icon-cross-large"
                             ></i>
                         </div>
                     </x-admin::form.control-group>
@@ -228,7 +225,7 @@
                     <x-admin::form.control-group class="!mb-0">
                         <i
                             @click="removeProduct"
-                            class="icon-delete cursor-pointer text-2xl"
+                            class="text-2xl cursor-pointer icon-delete"
                         ></i>
                     </x-admin::form.control-group>
                 </template>
@@ -245,6 +242,21 @@
             data: function () {
                 return {
                     products: @json($lead->products),
+                }
+            },
+
+            computed: {
+                totalLeadValue() {
+                    return this.products.reduce((total, product) => {
+                        return total + (parseFloat(product.price || 0) * parseFloat(product.quantity || 0));
+                    }, 0);
+                }
+            },
+
+            watch: {
+                totalLeadValue(newValue) {
+                    // Update lead value in parent component or emit event
+                    this.$emitter.emit('lead-value-updated', newValue);
                 }
             },
 
@@ -276,6 +288,7 @@
             data() {
                 return {
                     products: [],
+                    updateTimeout: null,
                 }
             },
 
@@ -299,6 +312,20 @@
                         },
                     };
                 },
+
+                // Computed amount for real-time display
+                computedAmount() {
+                    return parseFloat(this.product.price || 0) * parseFloat(this.product.quantity || 0);
+                }
+            },
+
+            watch: {
+                'product.price'() {
+                    this.updateAmount();
+                },
+                'product.quantity'() {
+                    this.updateAmount();
+                }
             },
 
             methods: {
@@ -317,6 +344,49 @@
                     this.product.price = result.price;
 
                     this.product.quantity = result.quantity ?? 0;
+
+                    // Update amount when product is added
+                    this.updateAmount();
+                },
+
+                /**
+                 * Update amount when price or quantity changes
+                 */
+                updateAmount() {
+                    this.product.amount = this.computedAmount;
+
+                    // Send update to server if product is not new (with debounce)
+                    if (!this.product.is_new && this.product.product_id) {
+                        // Clear previous timeout
+                        if (this.updateTimeout) {
+                            clearTimeout(this.updateTimeout);
+                        }
+
+                        // Set new timeout for 500ms
+                        this.updateTimeout = setTimeout(() => {
+                            this.updateProductOnServer();
+                        }, 500);
+                    }
+                },                /**
+                 * Update product on server
+                 */
+                updateProductOnServer() {
+                    this.$axios.post('{{ route('admin.leads.product.add', $lead->id) }}', {
+                        _method: 'PUT',
+                        product_id: this.product.product_id,
+                        quantity: this.product.quantity,
+                        price: this.product.price,
+                        amount: this.computedAmount,
+                    })
+                    .then(response => {
+                        // Update the local product amount with the computed value
+                        this.product.amount = this.computedAmount;
+                        // Optional: show success message
+                        // this.$emitter.emit('add-flash', { type: 'success', message: 'Product updated' });
+                    })
+                    .catch(error => {
+                        console.error('Error updating product:', error);
+                    });
                 },
 
                 /**

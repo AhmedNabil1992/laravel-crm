@@ -30,8 +30,8 @@
 
             if (in_array($locale, ['ar', 'fa', 'tr'])) {
                 $fontFamily = [
-                    'regular' => 'Courier',
-                    'bold'    => 'Courier-Bold',
+                    'regular' => 'DejaVu Sans, Arial Unicode MS, Tahoma, Arial, sans-serif',
+                    'bold'    => 'DejaVu Sans, Arial Unicode MS, Tahoma, Arial, sans-serif',
                 ];
             }
         @endphp
@@ -39,20 +39,6 @@
         <!-- lang supports inclusion -->
         <style type="text/css">
             @charset "UTF-8";
-
-            @font-face {
-                font-family: 'Cairo';
-                src: url('{{ asset("fonts/Cairo-Regular.ttf") }}') format('truetype');
-                font-weight: normal;
-                font-style: normal;
-            }
-
-            @font-face {
-                font-family: 'Cairo';
-                src: url('{{ asset("fonts/Cairo-Bold.ttf") }}') format('truetype');
-                font-weight: bold;
-                font-style: normal;
-            }
 
             * {
                 margin: 0;
@@ -76,6 +62,19 @@
                 font-family: "{{ $fontFamily['regular'] }}" !important;
                 direction: rtl;
                 text-align: right;
+            }
+
+            /* Arabic numbers fix */
+            .arabic-numbers,
+            .amount,
+            .price,
+            .total,
+            .subtotal {
+                font-variant-numeric: normal;
+                font-feature-settings: normal;
+                direction: ltr;
+                unicode-bidi: bidi-override;
+                display: inline-block;
             }
 
             b, th {
@@ -555,13 +554,13 @@
 
                                     <td class="text-center">{{ $item->quantity }}</td>
 
-                                    <td class="text-center">{!! core()->formatBasePrice($item->total, true) !!}</td>
+                                    <td class="text-center amount">{!! core()->formatBasePrice($item->total, true) !!}</td>
 
-                                    <td class="text-center">{!! core()->formatBasePrice($item->discount_amount, true) !!}</td>
+                                    <td class="text-center amount">{!! core()->formatBasePrice($item->discount_amount, true) !!}</td>
 
-                                    <td class="text-center">{!! core()->formatBasePrice($item->tax_amount, true) !!}</td>
+                                    <td class="text-center amount">{!! core()->formatBasePrice($item->tax_amount, true) !!}</td>
 
-                                    <td class="text-center">{!! core()->formatBasePrice($item->total + $item->tax_amount - $item->discount_amount, true) !!}</td>
+                                    <td class="text-center amount">{!! core()->formatBasePrice($item->total + $item->tax_amount - $item->discount_amount, true) !!}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -575,7 +574,7 @@
                             <tr>
                                 <td>@lang('admin::app.quotes.index.pdf.sub-total')</td>
                                 <td>-</td>
-                                <td>{!! core()->formatBasePrice($quote->sub_total, true) !!}</td>
+                                <td class="subtotal">{!! core()->formatBasePrice($quote->sub_total, true) !!}</td>
                             </tr>
 
                             <tr>
@@ -599,7 +598,7 @@
                             <tr>
                                 <td><strong>@lang('admin::app.quotes.index.pdf.grand-total')</strong></td>
                                 <td><strong>-</strong></td>
-                                <td><strong>{!! core()->formatBasePrice($quote->grand_total, true) !!}</strong></td>
+                                <td><strong class="total">{!! core()->formatBasePrice($quote->grand_total, true) !!}</strong></td>
                             </tr>
                         </tbody>
                     </table>

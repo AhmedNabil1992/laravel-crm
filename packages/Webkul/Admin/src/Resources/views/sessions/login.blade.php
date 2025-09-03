@@ -30,7 +30,7 @@
                         @lang('admin::app.users.login.title')
                     </p>
 
-                    <div class="border-y p-4 dark:border-gray-800">
+                    <div class="p-4 border-y dark:border-gray-800">
                         <!-- Email -->
                         <x-admin::form.control-group>
                             <x-admin::form.control-group.label class="required">
@@ -67,7 +67,7 @@
                             />
 
                             <span
-                                class="icon-eye-hide absolute top-11 -translate-y-2/4 cursor-pointer text-2xl ltr:right-3 rtl:left-3"
+                                class="absolute text-2xl cursor-pointer icon-eye-hide top-11 -translate-y-2/4 ltr:right-3 rtl:left-3"
                                 onclick="switchVisibility()"
                                 id="visibilityIcon"
                                 role="presentation"
@@ -82,7 +82,7 @@
                     <div class="flex items-center justify-between p-4">
                         <!-- Forgot Password Link -->
                         <a
-                            class="cursor-pointer text-xs font-semibold leading-6 text-brandColor"
+                            class="text-xs font-semibold leading-6 cursor-pointer text-brandColor"
                             href="{{ route('admin.forgot_password.create') }}"
                         >
                             @lang('admin::app.users.login.forget-password-link')
@@ -105,9 +105,8 @@
         <!-- Powered By -->
         <div class="text-sm font-normal">
             @lang('admin::app.components.layouts.powered-by.description', [
-                'krayin' => '<a class="text-brandColor hover:underline " href="https://krayincrm.com/">Krayin</a>',
-                'webkul' => '<a class="text-brandColor hover:underline " href="https://webkul.com/">Webkul</a>',
-            ]) 
+                'eTech Valley' => '<a class="text-brandColor hover:underline " href="https://etech-valley.com/">eTech Valley</a>',
+            ])
         </div>
     </div>
 

@@ -8,7 +8,7 @@
     <!-- Create Lead Form -->
     <x-admin::form :action="route('admin.leads.store')">
         <div class="flex flex-col gap-4">
-            <div class="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+            <div class="flex items-center justify-between px-4 py-2 text-sm bg-white border border-gray-200 rounded-lg dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
                 <div class="flex flex-col gap-2">
                     <x-admin::breadcrumbs name="leads.create" />
 
@@ -78,7 +78,7 @@
             type="text/x-template"
             id="v-lead-create-template"
         >
-            <div class="box-shadow flex flex-col gap-4 rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+            <div class="flex flex-col gap-4 bg-white border border-gray-200 rounded-lg box-shadow dark:border-gray-800 dark:bg-gray-900">
                 {!! view_render_event('admin.leads.edit.form_controls.before') !!}
 
                 <div class="flex w-full gap-2 border-b border-gray-200 dark:border-gray-800">
@@ -147,7 +147,7 @@
                                 <div class="w-full">
                                     <x-admin::attributes
                                         :custom-attributes="app('Webkul\Attribute\Repositories\AttributeRepository')->findWhere([
-                                            ['code', 'IN', ['lead_value', 'lead_type_id', 'lead_source_id']],
+                                            ['code', 'IN', ['lead_type_id', 'lead_source_id']],
                                             'entity_type' => 'leads',
                                             'quick_add'   => 1
                                         ])"

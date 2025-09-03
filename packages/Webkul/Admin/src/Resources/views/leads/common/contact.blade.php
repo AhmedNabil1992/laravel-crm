@@ -39,7 +39,7 @@
 
         <!-- Person Email -->
         <x-admin::form.control-group>
-            <x-admin::form.control-group.label class="required">
+            <x-admin::form.control-group.label>
                 @lang('admin::app.leads.common.contact.email')
             </x-admin::form.control-group.label>
 

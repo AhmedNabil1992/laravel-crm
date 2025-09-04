@@ -11,6 +11,7 @@ use Webkul\Attribute\Repositories\AttributeValueRepository;
 use Webkul\Contact\Repositories\PersonRepository;
 use Webkul\Core\Eloquent\Repository;
 use Webkul\Lead\Contracts\Lead;
+use Webkul\Lead\Models\Product;
 
 class LeadRepository extends Repository
 {
@@ -87,7 +88,7 @@ class LeadRepository extends Repository
                 'lead_pipeline_stages.name as status',
                 'lead_pipeline_stages.id as lead_pipeline_stage_id'
             )
-                ->addSelect(DB::raw('DATEDIFF('.DB::getTablePrefix().'leads.created_at + INTERVAL lead_pipelines.rotten_days DAY, now()) as rotten_days'))
+                ->addSelect(DB::raw('DATEDIFF(' . DB::getTablePrefix() . 'leads.created_at + INTERVAL lead_pipelines.rotten_days DAY, now()) as rotten_days'))
                 ->leftJoin('persons', 'leads.person_id', '=', 'persons.id')
                 ->leftJoin('lead_pipelines', 'leads.lead_pipeline_id', '=', 'lead_pipelines.id')
                 ->leftJoin('lead_pipeline_stages', 'leads.lead_pipeline_stage_id', '=', 'lead_pipeline_stages.id')
@@ -116,7 +117,7 @@ class LeadRepository extends Repository
          * If a person is provided, create or update the person and set the `person_id`.
          */
         if (isset($data['person'])) {
-            if (! empty($data['person']['id'])) {
+            if (!empty($data['person']['id'])) {
                 $person = $this->personRepository->findOrFail($data['person']['id']);
             } else {
                 $person = $this->personRepository->create(array_merge($data['person'], [
@@ -132,7 +133,7 @@ class LeadRepository extends Repository
         }
 
         $lead = parent::create(array_merge([
-            'lead_pipeline_id'       => 1,
+            'lead_pipeline_id' => 1,
             'lead_pipeline_stage_id' => 1,
         ], $data));
 
@@ -141,12 +142,27 @@ class LeadRepository extends Repository
         ]));
 
         if (isset($data['products'])) {
+            $totalLeadValue = 0;
+
             foreach ($data['products'] as $product) {
+                $amount = $product['price'] * $product['quantity'];
+                $totalLeadValue += $amount;
+
                 $this->productRepository->create(array_merge($product, [
                     'lead_id' => $lead->id,
-                    'amount'  => $product['price'] * $product['quantity'],
+                    'amount' => $amount,
                 ]));
             }
+
+            // Update lead_value with total products amount
+            parent::update(['lead_value' => $totalLeadValue], $lead->id);
+
+            // Update attribute value for lead_value
+            $this->attributeValueRepository->save([
+                'entity_id' => $lead->id,
+                'entity_type' => 'leads',
+                'lead_value' => $totalLeadValue,
+            ]);
         }
 
         return $lead;
@@ -167,7 +183,7 @@ class LeadRepository extends Repository
          * For example, in the lead Kanban section, when switching stages, only the stage will be updated.
          */
         if (isset($data['person'])) {
-            if (! empty($data['person']['id'])) {
+            if (!empty($data['person']['id'])) {
                 $person = $this->personRepository->findOrFail($data['person']['id']);
             } else {
                 $person = $this->personRepository->create(array_merge($data['person'], [
@@ -199,7 +215,7 @@ class LeadRepository extends Repository
          * A collection of attributes may also be provided, which will be treated as valid,
          * regardless of whether it is empty or not.
          */
-        if (! empty($attributes)) {
+        if (!empty($attributes)) {
             /**
              * If attributes are provided as an array, then fetch the attributes from the database;
              * otherwise, use the provided collection of attributes.
@@ -230,25 +246,67 @@ class LeadRepository extends Repository
         $previousProductIds = $lead->products()->pluck('id');
 
         if (isset($data['products'])) {
-            foreach ($data['products'] as $productId => $productInputs) {
-                if (Str::contains($productId, 'product_')) {
-                    $this->productRepository->create(array_merge([
-                        'lead_id' => $lead->id,
-                    ], $productInputs));
-                } else {
-                    if (is_numeric($index = $previousProductIds->search($productId))) {
-                        $previousProductIds->forget($index);
+            // Use database transaction to ensure all products are updated together
+            DB::transaction(function () use ($data, $lead, $previousProductIds) {
+                // Temporarily disable observer to avoid multiple calculations
+                Product::unsetEventDispatcher();
+
+                foreach ($data['products'] as $productId => $productInputs) {
+                    if (Str::contains($productId, 'product_')) {
+                        $this->productRepository->create(array_merge([
+                            'lead_id' => $lead->id,
+                            'amount' => $productInputs['price'] * $productInputs['quantity'],
+                        ], $productInputs));
+                    } else {
+                        if (is_numeric($index = $previousProductIds->search($productId))) {
+                            $previousProductIds->forget($index);
+                        }
+
+                        $productInputs['amount'] = $productInputs['price'] * $productInputs['quantity'];
+                        $this->productRepository->update($productInputs, $productId);
                     }
-
-                    $this->productRepository->update($productInputs, $productId);
                 }
-            }
+
+                foreach ($previousProductIds as $productId) {
+                    $this->productRepository->delete($productId);
+                }
+
+                // Re-enable observer
+                Product::setEventDispatcher(app('events'));
+            });
         }
 
-        foreach ($previousProductIds as $productId) {
-            $this->productRepository->delete($productId);
-        }
+        // Recalculate lead_value based on current products after all updates
+        $this->recalculateLeadValue($lead);
 
         return $lead;
+    }
+
+    /**
+     * Recalculate lead value based on products total amount
+     *
+     * @param mixed $leadId
+     * @return void
+     */
+    protected function recalculateLeadValue($leadId)
+    {
+        if (is_object($leadId)) {
+            $leadId = $leadId->id;
+        }
+
+        // Use a fresh query to get the most up-to-date products
+        $totalLeadValue = DB::table('lead_products')
+            ->where('lead_id', $leadId)
+            ->sum('amount');
+
+        // Update lead_value in leads table using parent update method
+        parent::update(['lead_value' => $totalLeadValue], $leadId);
+
+        // Update attribute value for lead_value
+        $this->attributeValueRepository->save([
+            'entity_id' => $leadId,
+            'entity_type' => 'leads',
+            'lead_value' => $totalLeadValue,
+        ]);
     }
 }

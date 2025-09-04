@@ -4,6 +4,8 @@ namespace Webkul\Lead\Providers;
 
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
+use Webkul\Lead\Models\Product;
+use Webkul\Lead\Observers\ProductObserver;
 
 class LeadServiceProvider extends ServiceProvider
 {
@@ -14,7 +16,10 @@ class LeadServiceProvider extends ServiceProvider
      */
     public function boot(Router $router)
     {
-        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
+        $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
+
+        // Register observers
+        Product::observe(ProductObserver::class);
     }
 
     /**
@@ -22,5 +27,7 @@ class LeadServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function register() {}
+    public function register()
+    {
+    }
 }

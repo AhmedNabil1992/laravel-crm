@@ -71,7 +71,7 @@
             <!-- Add New Product Item -->
             <button
                 type="button"
-                class="flex max-w-max items-center gap-2 text-brandColor"
+                class="flex items-center gap-2 max-w-max text-brandColor"
                 @click="addProduct"
             >
                 <i class="icon-add text-md !text-brandColor"></i>
@@ -93,6 +93,7 @@
                         ::src="src"
                         ::name="`${inputName}[name]`"
                         ::params="params"
+                        :preload="true"
                         :placeholder="trans('admin::app.leads.common.products.product-name')"
                         @on-selected="(product) => addProduct(product)"
                         ::value="{ id: product.product_id, name: product.name }"
@@ -166,7 +167,7 @@
                 <x-admin::form.control-group >
                     <i
                         @click="removeProduct"
-                        class="icon-delete cursor-pointer text-2xl"
+                        class="text-2xl cursor-pointer icon-delete"
                     ></i>
                 </x-admin::form.control-group>
             </x-admin::table.td>
